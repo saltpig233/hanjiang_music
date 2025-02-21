@@ -47,6 +47,9 @@ class _MainPageState extends State<MainPage> {
   var _musicLength = "";
   var _musicpos = "";
 
+  var choicesList = [];
+  var correctChoice = 0;
+
   // void refreshRandom(){
   //   var totalnum = _musicList.length;
   //   setState(() {
@@ -62,7 +65,9 @@ class _MainPageState extends State<MainPage> {
     if (_pausedPosition != Duration.zero) {
       player.seek(_pausedPosition);
     }
-    player.play(UrlSource("https://unpkg.com/hjmusic-res@1.0.0/$_currentMusic.mp3"));
+    player.play(
+      UrlSource("https://unpkg.com/hjmusic-res@1.0.0/$_currentMusic.mp3"),
+    );
   }
 
   Future pauseMusic() async {
@@ -70,13 +75,46 @@ class _MainPageState extends State<MainPage> {
     player.pause();
   }
 
-  void taskDone(bool isCorrect) {
+  void choicesisCorrect() {
     setState(() {
       _currentTestTotal++;
-      if (isCorrect) {
-        _currentTestPassed++;
-      }
+      _currentTestPassed++;
     });
+    changeCurrentMusicIndex(
+      _currentMusicIndex == _musicList.length - 1 ? 0 : _currentMusicIndex + 1,
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('回答正确！当前战绩 $_currentTestPassed/$_currentTestTotal'),
+        width: 300.0,
+
+        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 15),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(milliseconds: 700),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(15.0),
+        ),
+      ),
+    );
+  }
+
+  void choicesisWrong() {
+    setState(() {
+      _currentTestTotal++;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('回答错误！当前战绩 $_currentTestPassed/$_currentTestTotal'),
+        width: 300.0,
+        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 15),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(milliseconds: 700),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(15.0),
+        ),
+      ),
+    );
   }
 
   void changeCurrentMusicIndex(int index) {
@@ -87,6 +125,17 @@ class _MainPageState extends State<MainPage> {
     player.stop();
     setState(() {
       _isPlaying = false;
+
+      choicesList = [];
+
+      correctChoice = Random().nextInt(5);
+      for (int i = 0; i < 5; i++) {
+        if (i == correctChoice) {
+          choicesList.add(_currentMusic);
+        } else {
+          choicesList.add(_musicList[Random().nextInt(_musicList.length)]);
+        }
+      }
     });
   }
 
@@ -110,6 +159,7 @@ class _MainPageState extends State<MainPage> {
     super.initState();
     listShuffle();
     player.setReleaseMode(ReleaseMode.loop);
+    changeCurrentMusicIndex(0);
   }
 
   @override
@@ -187,7 +237,10 @@ class _MainPageState extends State<MainPage> {
                                     1.0;
                                 return Slider(
                                   year2023: false,
-                                  value: position.inSeconds.toDouble().clamp(0, maxDuration),
+                                  value: position.inSeconds.toDouble().clamp(
+                                    0,
+                                    maxDuration,
+                                  ),
                                   max: maxDuration,
                                   onChanged: (value) {
                                     player.seek(
@@ -239,6 +292,7 @@ class _MainPageState extends State<MainPage> {
                       ),
                       IconButton(
                         onPressed: () {
+                          print(_currentMusic);
                           setState(() {
                             if (_isPlaying)
                               pauseMusic();
@@ -278,105 +332,18 @@ class _MainPageState extends State<MainPage> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.start,
                           children: [
-                            ...List.generate(5, (index) {
-                              var options = List<String>.from(_musicList);
-                              var _isend = false;
-                              options.remove(_currentMusic);
-
-                              var random = Random();
-                              for (var i = options.length - 1; i > 0; i--) {
-                                var j = random.nextInt(i + 1);
-                                var temp = options[i];
-                                options[i] = options[j];
-                                options[j] = temp;
-                              }
-
-                              var correctIndex = Random().nextInt(5);
-                              if (index != correctIndex) {
-                                return ListTile(
-                                  leading: Icon(
-                                    Icons.music_note,
-                                    color: _isend ? Colors.red : null,
-                                  ),
-                                  title: Text(options[index]),
-                                  onTap:
-                                      () => {
-                                        setState(() {
-                                          _currentTestTotal++;
-                                          _isExamMode = false;
-                                        }),
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              '回答错误~ 当前战绩 $_currentTestPassed/$_currentTestTotal',
-                                            ),
-                                            width: 300.0,
-
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 20.0,
-                                              vertical: 15,
-                                            ),
-                                            behavior: SnackBarBehavior.floating,
-                                            duration: const Duration(
-                                              milliseconds: 700,
-                                            ),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(15.0),
-                                            ),
-                                          ),
-                                        ),
-                                      },
-                                );
-                              } else {
-                                return ListTile(
-                                  leading: Icon(
-                                    Icons.music_note,
-                                    color: _isend ? Colors.green : null,
-                                  ),
-                                  title: Text(
-                                    _currentMusic,
-                                  ),
-                                  onTap:
-                                      () => {
-                                        changeCurrentMusicIndex(
-                                          _currentMusicIndex ==
-                                                  _musicList.length - 1
-                                              ? 0
-                                              : _currentMusicIndex + 1,
-                                        ),
-                                        setState(() {
-                                          _currentTestTotal++;
-                                          _currentTestPassed++;
-                                        }),
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              '回答正确！当前战绩 $_currentTestPassed/$_currentTestTotal',
-                                            ),
-                                            width: 300.0,
-
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 20.0,
-                                              vertical: 15,
-                                            ),
-                                            behavior: SnackBarBehavior.floating,
-                                            duration: const Duration(
-                                              milliseconds: 700,
-                                            ),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(15.0),
-                                            ),
-                                          ),
-                                        ),
-                                      },
-                                );
-                              }
+                            ...List.generate(5, (idx) {
+                              return ListTile(
+                                leading: Icon(Icons.music_note),
+                                title: Text(choicesList[idx]),
+                                onTap:
+                                    () => {
+                                      if (idx == correctChoice)
+                                        {choicesisCorrect()}
+                                      else
+                                        {choicesisWrong()},
+                                    },
+                              );
                             }),
                           ],
                         ),
