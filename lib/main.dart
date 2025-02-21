@@ -1,4 +1,8 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:hanjiang_music/music.dart';
 
 void main() {
   runApp(const MyApp());
@@ -29,9 +33,84 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage> {
   var _isExamMode = false;
-  var _isRandomPlaying = true;
+  var _isRandomPlaying = false;
   var _isPlaying = false;
   var _currentSliderValue = 0.0;
+
+  var _musicList = List<String>.from(musicTitles);
+  var _currentMusicIndex = 0;
+  var _currentMusic = musicTitles[0];
+
+  var _currentTestTotal = 0;
+  var _currentTestPassed = 0;
+
+  var _musicLength = "";
+  var _musicpos = "";
+
+  // void refreshRandom(){
+  //   var totalnum = _musicList.length;
+  //   setState(() {
+  //     _currentMusicIndex = Random().nextInt(totalnum);
+  //     _currentMusic = _musicList[_currentMusicIndex];
+  //   });
+  // }
+
+  AudioPlayer player = AudioPlayer();
+  Duration _pausedPosition = Duration.zero;
+
+  Future playMusic() async {
+    if (_pausedPosition != Duration.zero) {
+      player.seek(_pausedPosition);
+    }
+    player.play(UrlSource("https://unpkg.com/hjmusic-res@1.0.0/$_currentMusic.mp3"));
+  }
+
+  Future pauseMusic() async {
+    _pausedPosition = await player.getCurrentPosition() ?? Duration.zero;
+    player.pause();
+  }
+
+  void taskDone(bool isCorrect) {
+    setState(() {
+      _currentTestTotal++;
+      if (isCorrect) {
+        _currentTestPassed++;
+      }
+    });
+  }
+
+  void changeCurrentMusicIndex(int index) {
+    setState(() {
+      _currentMusicIndex = index;
+      _currentMusic = _musicList[_currentMusicIndex];
+    });
+    player.stop();
+    setState(() {
+      _isPlaying = false;
+    });
+  }
+
+  void listShuffle() {
+    setState(() {
+      var random = Random();
+      for (var i = _musicList.length - 1; i > 0; i--) {
+        var j = random.nextInt(i + 1);
+        var temp = _musicList[i];
+        _musicList[i] = _musicList[j];
+        _musicList[j] = temp;
+      }
+
+      _currentMusicIndex = 0;
+      _currentMusic = _musicList[_currentMusicIndex];
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    listShuffle();
+    player.setReleaseMode(ReleaseMode.loop);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -66,10 +145,10 @@ class _MainPageState extends State<MainPage> {
               ),
               SizedBox(height: 20),
               Text(
-                !_isExamMode ? "「迷星叫」" : "?",
+                !_isExamMode ? _currentMusic : "?",
                 style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
               ),
-              Text(!_isExamMode ? "高松 燈" : "?", style: TextStyle(fontSize: 20)),
+              // Text(!_isExamMode ? "高松 燈" : "?", style: TextStyle(fontSize: 20)),
               SizedBox(height: 10),
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -85,18 +164,60 @@ class _MainPageState extends State<MainPage> {
                         //   value: 0.8,
                         //   semanticsLabel: 'Linear progress indicator',
                         // ),
-                        Slider(
-                          year2023: false,
-                          value: _currentSliderValue,
-                          max: 100,
-                          onChanged: (double value) {
-                            setState(() {
-                              _currentSliderValue = value;
-                            });
+                        // Slider(
+                        //   year2023: false,
+                        //   value: _currentSliderValue,
+                        //   // max: player.getDuration(),
+                        //   onChanged: (double value) {
+                        //     setState(() {
+                        //       _currentSliderValue = value;
+                        //     });
+                        //   },
+                        // ),
+                        StreamBuilder<Duration>(
+                          stream: player.onPositionChanged,
+                          builder: (context, snapshot) {
+                            final position = snapshot.data ?? Duration.zero;
+                            return FutureBuilder<Duration?>(
+                              future: player.getDuration(),
+                              builder: (context, durationSnapshot) {
+                                final maxDuration =
+                                    durationSnapshot.data?.inSeconds
+                                        .toDouble() ??
+                                    1.0;
+                                return Slider(
+                                  year2023: false,
+                                  value: position.inSeconds.toDouble().clamp(0, maxDuration),
+                                  max: maxDuration,
+                                  onChanged: (value) {
+                                    player.seek(
+                                      Duration(seconds: value.toInt()),
+                                    );
+                                  },
+                                );
+                              },
+                            );
                           },
                         ),
                         SizedBox(height: 4),
-                        Text(!_isExamMode ? "03:00 / 04:00" : "..."),
+                        StreamBuilder<Duration>(
+                          stream: player.onPositionChanged,
+                          builder: (context, snapshot) {
+                            final position = snapshot.data ?? Duration.zero;
+                            _musicpos = position.toString().split('.').first;
+                            player.onDurationChanged.listen((Duration d) {
+                              setState(() {
+                                _musicLength = d.toString().split('.').first;
+                              });
+                            });
+
+                            return Text(
+                              !_isExamMode
+                                  ? "${position.toString().split('.').first} / ${_musicLength ?? "0:00"}"
+                                  : "...",
+                            );
+                          },
+                        ),
                       ],
                     ),
                   ),
@@ -106,12 +227,24 @@ class _MainPageState extends State<MainPage> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       IconButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          // -1
+                          changeCurrentMusicIndex(
+                            _currentMusicIndex == 0
+                                ? _musicList.length - 1
+                                : _currentMusicIndex - 1,
+                          );
+                        },
                         icon: Icon(Icons.fast_rewind, size: 40),
                       ),
                       IconButton(
                         onPressed: () {
                           setState(() {
+                            if (_isPlaying)
+                              pauseMusic();
+                            else
+                              playMusic();
+
                             _isPlaying = !_isPlaying;
                           });
                         },
@@ -121,7 +254,13 @@ class _MainPageState extends State<MainPage> {
                         ),
                       ),
                       IconButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          changeCurrentMusicIndex(
+                            _currentMusicIndex == _musicList.length - 1
+                                ? 0
+                                : _currentMusicIndex + 1,
+                          );
+                        },
                         icon: Icon(Icons.fast_forward, size: 40),
                       ),
                     ],
@@ -139,56 +278,106 @@ class _MainPageState extends State<MainPage> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.start,
                           children: [
-                            ListTile(
-                              onTap:
-                                  () => ScaffoldMessenger.of(
-                                    context,
-                                  ).showSnackBar(
-                                    SnackBar(
-                                      content: const Text('回答正确！当前战绩 5/123'),
-                                      // action: SnackBarAction(
-                                      //   label: 'Action',
-                                      //   onPressed: () {
-                                      //     // Code to execute.
-                                      //   },
-                                      // ),
-                                      width: 300.0,
+                            ...List.generate(5, (index) {
+                              var options = List<String>.from(_musicList);
+                              var _isend = false;
+                              options.remove(_currentMusic);
 
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 20.0,
-                                        vertical: 15,
-                                      ),
-                                      behavior: SnackBarBehavior.floating,
-                                      duration: const Duration(
-                                        milliseconds: 400,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(
-                                          15.0,
-                                        ),
-                                      ),
-                                    ),
+                              var random = Random();
+                              for (var i = options.length - 1; i > 0; i--) {
+                                var j = random.nextInt(i + 1);
+                                var temp = options[i];
+                                options[i] = options[j];
+                                options[j] = temp;
+                              }
+
+                              var correctIndex = Random().nextInt(5);
+                              if (index != correctIndex) {
+                                return ListTile(
+                                  leading: Icon(
+                                    Icons.music_note,
+                                    color: _isend ? Colors.red : null,
                                   ),
-                              iconColor: Colors.green,
-                              leading: Icon(Icons.music_note),
-                              title: Text("迷星叫"),
-                              subtitle: Text("高松 燈"),
-                              trailing: Icon(Icons.arrow_forward),
-                            ),
-                            ListTile(
-                              iconColor: Colors.red,
-                              leading: Icon(Icons.music_note),
-                              title: Text("苹果箱"),
-                              subtitle: Text("极地熊"),
-                              trailing: Icon(Icons.arrow_forward),
-                            ),
-                            ListTile(
-                              iconColor: Colors.red,
-                              leading: Icon(Icons.music_note),
-                              title: Text("熊出没"),
-                              subtitle: Text("陈小雨"),
-                              trailing: Icon(Icons.arrow_forward),
-                            ),
+                                  title: Text(options[index]),
+                                  onTap:
+                                      () => {
+                                        setState(() {
+                                          _currentTestTotal++;
+                                          _isExamMode = false;
+                                        }),
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              '回答错误~ 当前战绩 $_currentTestPassed/$_currentTestTotal',
+                                            ),
+                                            width: 300.0,
+
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 20.0,
+                                              vertical: 15,
+                                            ),
+                                            behavior: SnackBarBehavior.floating,
+                                            duration: const Duration(
+                                              milliseconds: 700,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(15.0),
+                                            ),
+                                          ),
+                                        ),
+                                      },
+                                );
+                              } else {
+                                return ListTile(
+                                  leading: Icon(
+                                    Icons.music_note,
+                                    color: _isend ? Colors.green : null,
+                                  ),
+                                  title: Text(
+                                    _currentMusic,
+                                  ),
+                                  onTap:
+                                      () => {
+                                        changeCurrentMusicIndex(
+                                          _currentMusicIndex ==
+                                                  _musicList.length - 1
+                                              ? 0
+                                              : _currentMusicIndex + 1,
+                                        ),
+                                        setState(() {
+                                          _currentTestTotal++;
+                                          _currentTestPassed++;
+                                        }),
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              '回答正确！当前战绩 $_currentTestPassed/$_currentTestTotal',
+                                            ),
+                                            width: 300.0,
+
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 20.0,
+                                              vertical: 15,
+                                            ),
+                                            behavior: SnackBarBehavior.floating,
+                                            duration: const Duration(
+                                              milliseconds: 700,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(15.0),
+                                            ),
+                                          ),
+                                        ),
+                                      },
+                                );
+                              }
+                            }),
                           ],
                         ),
                       ),
@@ -236,9 +425,11 @@ class _MainPageState extends State<MainPage> {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          Text("题目总数: 123"),
-                          Text("已通过: 4"),
-                          Text("通过率 34%"),
+                          Text("题目总数: $_currentTestTotal"),
+                          Text("已通过: $_currentTestPassed"),
+                          Text(
+                            "通过率: ${_currentTestTotal == 0 ? 0.00 : (_currentTestPassed / _currentTestTotal * 100).toStringAsFixed(2)}%",
+                          ),
                         ],
                       ),
                     );
@@ -263,15 +454,75 @@ class _MainPageState extends State<MainPage> {
             showDragHandle: true,
             context: context,
             builder: (context) {
-              return ReorderableList(
-                shrinkWrap: true,
-                itemBuilder:
-                    (content, index) => ListTile(
-                      key: Key(index.toString()),
-                      title: Text("$index"),
+              return SizedBox(
+                height: 400,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "当前播放列表",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () {
+                            listShuffle();
+                            Navigator.pop(context);
+                          },
+                          icon: Icon(Icons.shuffle_rounded),
+                        ),
+                      ],
                     ),
-                itemCount: 5,
-                onReorder: (int oldindex, int newindex) {},
+                    Expanded(
+                      child: StatefulBuilder(
+                        builder: (BuildContext context, StateSetter setState) {
+                          return ReorderableListView(
+                            children: [
+                              for (
+                                int index = 0;
+                                index < _musicList.length;
+                                index++
+                              )
+                                ListTile(
+                                  selected: _currentMusicIndex == index,
+                                  onTap: () {
+                                    changeCurrentMusicIndex(index);
+                                  },
+                                  key: Key('$index'),
+                                  leading: Icon(
+                                    Icons.music_note_outlined,
+                                    color:
+                                        _currentMusicIndex == index
+                                            ? Colors.amber
+                                            : null,
+                                  ),
+                                  title: Text(_musicList[index]),
+                                ),
+                            ],
+                            onReorder: (int oldIndex, int newIndex) {
+                              setState(() {
+                                if (newIndex > oldIndex) {
+                                  newIndex -= 1;
+                                }
+                                final item = _musicList.removeAt(oldIndex);
+                                _musicList.insert(newIndex, item);
+
+                                // _currentMusicIndex = newIndex;
+                                changeCurrentMusicIndex(newIndex);
+                              });
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               );
             },
           );
