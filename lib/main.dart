@@ -139,7 +139,12 @@ class _MainPageState extends State<MainPage> {
         if (i == correctChoice) {
           choicesList.add(_currentMusic);
         } else {
-          choicesList.add(_musicList[Random().nextInt(_musicList.length)]);
+          var nextChoice = Random().nextInt(_musicList.length);
+          if (choicesList.contains(_musicList[nextChoice]) || nextChoice == correctChoice) {
+            i--;
+          } else {
+            choicesList.add(_musicList[nextChoice]);
+          }
         }
       }
     });
@@ -325,6 +330,10 @@ class _MainPageState extends State<MainPage> {
                                 ? 0
                                 : _currentMusicIndex + 1,
                           );
+
+                          if(_isExamMode){
+                            choicesisWrong();
+                          }
                         },
                         icon: Icon(Icons.fast_forward, size: 40),
                       ),
@@ -371,6 +380,7 @@ class _MainPageState extends State<MainPage> {
                 "tips: 所有龟龟均为随机选取，请勿过度解读",
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
+              SizedBox(height: 20,)
             ],
           ),
         ),
