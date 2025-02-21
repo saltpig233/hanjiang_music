@@ -5,6 +5,9 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:hanjiang_music/music.dart';
 import 'package:hanjiang_music/totos.dart';
 
+import 'package:url_launcher/url_launcher.dart';
+import 'package:url_launcher/url_launcher_string.dart';
+
 void main() {
   runApp(const MyApp());
 }
@@ -364,7 +367,10 @@ class _MainPageState extends State<MainPage> {
               Text("❤️ Developed by FlipWind x SaltPig233."),
               Text("2025.2.21"),
               SizedBox(height: 30),
-              Text("tips: 所有龟龟均为随机选取，请勿过度解读", style: TextStyle(fontWeight: FontWeight.bold),)
+              Text(
+                "tips: 所有龟龟均为随机选取，请勿过度解读",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ],
           ),
         ),
@@ -416,7 +422,11 @@ class _MainPageState extends State<MainPage> {
               icon: Icon(Icons.info_outline),
             ),
             IconButton(
-              onPressed: () {},
+              onPressed: () {
+                launchUrlString(
+                  "https://qm.qq.com/q/wiqs3ygIDu",
+                );
+              },
               icon: Icon(Icons.cloud_download_outlined),
               tooltip: "下载音乐包",
             ),
