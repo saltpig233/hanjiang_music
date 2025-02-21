@@ -140,7 +140,7 @@ class _MainPageState extends State<MainPage> {
           choicesList.add(_currentMusic);
         } else {
           var nextChoice = Random().nextInt(_musicList.length);
-          if (choicesList.contains(_musicList[nextChoice]) || nextChoice == correctChoice) {
+          if (choicesList.contains(_musicList[nextChoice]) || _musicList[nextChoice] == correctChoice) {
             i--;
           } else {
             choicesList.add(_musicList[nextChoice]);
@@ -374,7 +374,7 @@ class _MainPageState extends State<MainPage> {
 
               SizedBox(height: 20),
               Text("❤️ Developed by FlipWind x SaltPig233."),
-              Text("2025.2.21"),
+              Text("Dev 2025.2.22.5"),
               SizedBox(height: 30),
               Text(
                 "tips: 所有龟龟均为随机选取，请勿过度解读",
