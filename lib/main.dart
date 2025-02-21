@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:hanjiang_music/music.dart';
+import 'package:hanjiang_music/totos.dart';
 
 void main() {
   runApp(const MyApp());
@@ -15,7 +16,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Music Exam',
+      title: '构思の音乐练习室',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
@@ -49,6 +50,7 @@ class _MainPageState extends State<MainPage> {
 
   var choicesList = [];
   var correctChoice = 0;
+  var nowtotos = 0;
 
   // void refreshRandom(){
   //   var totalnum = _musicList.length;
@@ -66,7 +68,7 @@ class _MainPageState extends State<MainPage> {
       player.seek(_pausedPosition);
     }
     player.play(
-      UrlSource("https://unpkg.com/hjmusic-res@1.0.0/$_currentMusic.mp3"),
+      UrlSource("https://unpkg.com/hjmusic-res@1.1.0/music/$_currentMusic.mp3"),
     );
   }
 
@@ -129,6 +131,7 @@ class _MainPageState extends State<MainPage> {
       choicesList = [];
 
       correctChoice = Random().nextInt(5);
+      nowtotos = Random().nextInt(totos.length);
       for (int i = 0; i < 5; i++) {
         if (i == correctChoice) {
           choicesList.add(_currentMusic);
@@ -189,7 +192,12 @@ class _MainPageState extends State<MainPage> {
                   child: Container(
                     height: 250,
                     width: 250,
-                    child: CircleAvatar(backgroundColor: Colors.amber),
+                    child: CircleAvatar(
+                      backgroundColor: Colors.amber,
+                      child: Image.network(
+                        "https://unpkg.com/hjmusic-res@1.1.0/totos/${totos[nowtotos]}.jpg",
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -356,6 +364,7 @@ class _MainPageState extends State<MainPage> {
               Text("❤️ Developed by FlipWind x SaltPig233."),
               Text("2025.2.21"),
               SizedBox(height: 30),
+              Text("tips: 所有龟龟均为随机选取，请勿过度解读", style: TextStyle(fontWeight: FontWeight.bold),)
             ],
           ),
         ),
